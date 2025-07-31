@@ -50,24 +50,22 @@ const MedicineReminderApp: React.FC = () => {
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [isNotificationConfigured, setIsNotificationConfigured] = useState(false);
   
-  // Use ref to track initialization status to avoid dependency issues
   const initializationRef = useRef({
     isInitialized: false,
     isConfigured: false,
     initializationAttempted: false,
   });
 
-  // Check if PushNotification module is available and properly loaded
+  // Check if PushNotification module is available
   const isPushNotificationAvailable = useCallback(() => {
     try {
       return (
         PushNotification && 
         typeof PushNotification === 'object' &&
-        typeof PushNotification.configure === 'function' &&
-        typeof PushNotification.localNotificationSchedule === 'function'
+        typeof PushNotification.configure === 'function'
       );
     } catch (error) {
-      console.warn('PushNotification module check failed:', error);
+      console.warn('PushNotification check failed:', error);
       return false;
     }
   }, []);
@@ -91,22 +89,22 @@ const MedicineReminderApp: React.FC = () => {
         }
         return true;
       } catch (err) {
-        console.warn('Permission request error:', err);
+        console.warn('Permission error:', err);
         return false;
       }
     }
     return true;
   };
 
-  // Create notification channel after PushNotification is configured
+  // Create notification channel
   const createNotificationChannel = useCallback(() => {
     if (!isPushNotificationAvailable()) {
-      console.warn('PushNotification not available for channel creation');
+      console.warn('Notifications not available');
       return;
     }
 
-    if (Platform.OS === 'android' && PushNotification.createChannel) {
-      try {
+    try {
+      if (Platform.OS === 'android' && PushNotification?.createChannel) {
         PushNotification.createChannel(
           {
             channelId: 'medicine-reminders',
@@ -117,28 +115,25 @@ const MedicineReminderApp: React.FC = () => {
             vibrate: true,
           },
           (created) => {
-            console.log(`Notification channel created: ${created}`);
+            console.log(`Channel created: ${created}`);
             initializationRef.current.isConfigured = true;
             setIsNotificationConfigured(true);
           }
         );
-      } catch (error) {
-        console.error('Error creating notification channel:', error);
-        // Fallback: mark as configured even if channel creation fails
+      } else {
         initializationRef.current.isConfigured = true;
         setIsNotificationConfigured(true);
       }
-    } else {
-      // For iOS, mark as configured immediately
+    } catch (error) {
+      console.error('Channel creation error:', error);
       initializationRef.current.isConfigured = true;
       setIsNotificationConfigured(true);
     }
   }, [isPushNotificationAvailable]);
 
-  // Initialize push notifications with better error handling
+  // Initialize notifications
   useEffect(() => {
     const initializeNotifications = async () => {
-      // Prevent multiple initialization attempts
       if (initializationRef.current.initializationAttempted) {
         return;
       }
@@ -146,125 +141,99 @@ const MedicineReminderApp: React.FC = () => {
       initializationRef.current.initializationAttempted = true;
 
       try {
-        // Check if PushNotification module is available
         if (!isPushNotificationAvailable()) {
-          console.warn('PushNotification module not available or not properly loaded');
+          console.warn('PushNotification not available');
           setNotificationsEnabled(false);
           setIsNotificationConfigured(false);
           return;
         }
 
-        // Request permissions first
         const hasPermission = await requestNotificationPermission();
         if (!hasPermission) {
-          console.warn('Notification permission denied');
+          console.warn('Permission denied');
           setNotificationsEnabled(false);
           return;
         }
 
-        // Configure PushNotification with better error handling
-        PushNotification.configure({
-          onRegister: function (token) {
-            console.log('TOKEN:', token);
-            setNotificationsEnabled(true);
-            initializationRef.current.isInitialized = true;
-            
-            // Create channel after successful registration
-            setTimeout(() => {
+        if (PushNotification.configure) {
+          PushNotification.configure({
+            onRegister: (token) => {
+              console.log('TOKEN:', token);
+              setNotificationsEnabled(true);
+              initializationRef.current.isInitialized = true;
               createNotificationChannel();
-            }, 1000);
-          },
-          
-          onNotification: function (notification) {
-            console.log('NOTIFICATION:', notification);
-            if (notification.userInteraction) {
-              console.log('User tapped notification');
-            }
-          },
-          
-          onRegistrationError: function(err) {
-            console.error('Registration error:', err);
-            setNotificationsEnabled(false);
-            setIsNotificationConfigured(false);
-            initializationRef.current.isInitialized = false;
-            initializationRef.current.isConfigured = false;
-          },
-          
-          permissions: {
-            alert: true,
-            badge: true,
-            sound: true,
-          },
-          
-          popInitialNotification: false, // Changed from true to false to avoid the error
-          requestPermissions: Platform.OS === 'ios',
-        });
+            },
+            onNotification: (notification) => {
+              console.log('NOTIFICATION:', notification);
+            },
+            onRegistrationError: (err) => {
+              console.error('Registration error:', err);
+              setNotificationsEnabled(false);
+              setIsNotificationConfigured(false);
+            },
+            permissions: {
+              alert: true,
+              badge: true,
+              sound: true,
+            },
+            popInitialNotification: false,
+            requestPermissions: Platform.OS === 'ios',
+          });
+        }
 
-        // Set a fallback timeout for initialization
         setTimeout(() => {
           if (!initializationRef.current.isConfigured) {
-            console.log('Setting notifications as enabled (fallback)');
+            console.log('Using fallback notification setup');
             setNotificationsEnabled(true);
             setIsNotificationConfigured(true);
-            initializationRef.current.isInitialized = true;
-            initializationRef.current.isConfigured = true;
-            createNotificationChannel();
           }
-        }, 8000); // Increased timeout
+        }, 5000);
 
       } catch (error) {
-        console.error('Error initializing notifications:', error);
-        // Set fallback state even on error
+        console.error('Initialization error:', error);
         setNotificationsEnabled(false);
         setIsNotificationConfigured(false);
-        initializationRef.current.isInitialized = true; // Mark as attempted
-        initializationRef.current.isConfigured = false;
       }
     };
 
-    // Initialize with a delay to ensure native modules are ready
-    const timer = setTimeout(initializeNotifications, 3000);
-    return () => clearTimeout(timer);
+    initializeNotifications();
   }, [createNotificationChannel, isPushNotificationAvailable]);
 
-  // Load medicines from AsyncStorage
+  // Load medicines from storage
   const loadMedicines = useCallback(async () => {
     try {
       const stored = await AsyncStorage.getItem('medicine_reminders');
       if (stored) {
-        const parsedMedicines = JSON.parse(stored);
-        setMedicines(parsedMedicines);
+        setMedicines(JSON.parse(stored));
       }
     } catch (error) {
-      console.error('Error loading medicines:', error);
+      console.error('Load error:', error);
     }
   }, []);
 
-  // Save medicines to AsyncStorage
+  // Save medicines to storage
   const saveMedicines = useCallback(async (medicineList: Medicine[]) => {
     try {
       await AsyncStorage.setItem('medicine_reminders', JSON.stringify(medicineList));
     } catch (error) {
-      console.error('Error saving medicines:', error);
+      console.error('Save error:', error);
     }
   }, []);
 
-  // Initialize app
   useEffect(() => {
     loadMedicines();
   }, [loadMedicines]);
 
-  // Save medicines whenever the medicines array changes
   useEffect(() => {
     if (medicines.length >= 0) {
       saveMedicines(medicines);
     }
   }, [medicines, saveMedicines]);
 
-  // Schedule notification for medicine with better error handling
+  // Schedule notifications for a medicine
   const scheduleNotification = useCallback((medicine: Medicine) => {
-    if (!notificationsEnabled || !isNotificationConfigured || !isPushNotificationAvailable()) {
-      console.warn('Notifications are not enabled, configured, or available');
+    if (!notificationsEnabled || !isNotificationConfigured) {
+      console.warn('Notifications not ready');
       return;
     }
 
@@ -274,7 +243,6 @@ const MedicineReminderApp: React.FC = () => {
         const notificationDate = new Date();
         notificationDate.setHours(hours, minutes, 0, 0);
 
-        // If the time has passed today, schedule for tomorrow
         if (notificationDate <= new Date()) {
           notificationDate.setDate(notificationDate.getDate() + 1);
         }
@@ -290,126 +258,147 @@ const MedicineReminderApp: React.FC = () => {
           allowWhileIdle: true,
           soundName: 'default',
           vibrate: true,
-          vibration: 300,
-          playSound: true,
-          number: 1,
         };
 
-        // Add channelId only for Android
         if (Platform.OS === 'android') {
           notificationConfig.channelId = 'medicine-reminders';
         }
 
-        PushNotification.localNotificationSchedule(notificationConfig);
-        console.log(`Scheduled notification for ${medicine.name} at ${time}`);
+        if (PushNotification.localNotificationSchedule) {
+          PushNotification.localNotificationSchedule(notificationConfig);
+        }
       });
     } catch (error) {
-      console.error('Error scheduling notification:', error);
-      Alert.alert('تنبيه', 'حدث خطأ في جدولة التذكيرات. سيتم حفظ الدواء بدون تذكيرات.');
+      console.error('Scheduling error:', error);
+      Alert.alert('خطأ', 'حدث خطأ في جدولة التذكيرات');
     }
-  }, [notificationsEnabled, isNotificationConfigured, isPushNotificationAvailable]);
+  }, [notificationsEnabled, isNotificationConfigured]);
 
-  // Cancel notifications for medicine
+  // Cancel notifications for a medicine
   const cancelNotifications = useCallback((medicineId: string) => {
-    if (!notificationsEnabled || !isNotificationConfigured || !isPushNotificationAvailable()) {
-      return;
-    }
+    if (!notificationsEnabled || !isNotificationConfigured) return;
 
     try {
-      // Check if getScheduledLocalNotifications is available
-      if (PushNotification.getScheduledLocalNotifications) {
-        PushNotification.getScheduledLocalNotifications((notifications) => {
-          notifications.forEach((notification) => {
-            if (notification.id && notification.id.toString().startsWith(medicineId)) {
-              PushNotification.cancelLocalNotification(notification.id.toString());
-              console.log(`Cancelled notification: ${notification.id}`);
-            }
-          });
-        });
-      } else {
-        // Fallback: try to cancel by constructing likely IDs
-        for (let i = 0; i < 10; i++) { // Assume max 10 times per medicine
-          const notificationId = `${medicineId}_${i}`;
-          PushNotification.cancelLocalNotification(notificationId);
+      if (PushNotification.cancelLocalNotification) {
+        for (let i = 0; i < 10; i++) {
+          PushNotification.cancelLocalNotification(`${medicineId}_${i}`);
         }
       }
     } catch (error) {
-      console.error('Error canceling notifications:', error);
+      console.error('Cancellation error:', error);
     }
-  }, [notificationsEnabled, isNotificationConfigured, isPushNotificationAvailable]);
+  }, [notificationsEnabled, isNotificationConfigured]);
 
   // Test notification function
   const testNotification = useCallback(() => {
-    if (!notificationsEnabled || !isNotificationConfigured || !isPushNotificationAvailable()) {
-      Alert.alert('خطأ', 'التنبيهات غير مفعلة أو لم يتم تكوينها بعد');
+    if (!notificationsEnabled || !isNotificationConfigured) {
+      Alert.alert('خطأ', 'التنبيهات غير مفعلة');
       return;
     }
 
     try {
       const notificationConfig: any = {
         title: '🧪 تجربة التنبيه',
-        message: 'هذا تنبيه تجريبي للتأكد من عمل النظام',
+        message: 'هذا تنبيه تجريبي',
         playSound: true,
         soundName: 'default',
-        vibrate: true,
       };
 
-      // Add channelId only for Android
       if (Platform.OS === 'android') {
         notificationConfig.channelId = 'medicine-reminders';
       }
 
-      PushNotification.localNotification(notificationConfig);
-      Alert.alert('نجح', 'تم إرسال تنبيه تجريبي');
+      if (PushNotification.localNotification) {
+        PushNotification.localNotification(notificationConfig);
+        Alert.alert('نجح', 'تم إرسال التنبيه');
+      }
     } catch (error) {
-      console.error('Error sending test notification:', error);
-      Alert.alert('خطأ', 'حدث خطأ في إرسال التنبيه التجريبي');
+      console.error('Test notification error:', error);
+      Alert.alert('خطأ', 'فشل إرسال التنبيه');
     }
-  }, [notificationsEnabled, isNotificationConfigured, isPushNotificationAvailable]);
+  }, [notificationsEnabled, isNotificationConfigured]);
 
-  // Input validation functions
-  const validateMedicineName = useCallback((name: string): boolean => {
-    return name.trim().length >= 2;
-  }, []);
+  // Retry notification setup
+  const retryNotificationSetup = useCallback(() => {
+    initializationRef.current = {
+      isInitialized: false,
+      isConfigured: false,
+      initializationAttempted: false,
+    };
+    setNotificationsEnabled(false);
+    setIsNotificationConfigured(false);
+    
+    setTimeout(() => {
+      const initializeNotifications = async () => {
+        try {
+          if (!isPushNotificationAvailable()) {
+            console.warn('PushNotification not available');
+            return;
+          }
 
-  const validateDosage = useCallback((dosage: string): boolean => {
-    return dosage.trim().length >= 2;
-  }, []);
+          const hasPermission = await requestNotificationPermission();
+          if (!hasPermission) {
+            console.warn('Permission denied');
+            return;
+          }
 
-  const validateTime = useCallback((time: string): boolean => {
-    const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
-    return timeRegex.test(time);
-  }, []);
+          if (PushNotification.configure) {
+            PushNotification.configure({
+              onRegister: (token) => {
+                console.log('TOKEN:', token);
+                setNotificationsEnabled(true);
+                initializationRef.current.isInitialized = true;
+                createNotificationChannel();
+              },
+              onNotification: (notification) => {
+                console.log('NOTIFICATION:', notification);
+              },
+              permissions: {
+                alert: true,
+                badge: true,
+                sound: true,
+              },
+              popInitialNotification: false,
+              requestPermissions: Platform.OS === 'ios',
+            });
+          }
+        } catch (error) {
+          console.error('Retry error:', error);
+        }
+      };
+      initializeNotifications();
+    }, 1000);
+  }, [createNotificationChannel, isPushNotificationAvailable]);
 
-  const validateForm = useCallback((): boolean => {
+  // Validation functions
+  const validateMedicineName = (name: string) => name.trim().length >= 2;
+  const validateDosage = (dosage: string) => dosage.trim().length >= 2;
+  const validateTime = (time: string) => /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(time);
+
+  const validateForm = () => {
     const errors: ValidationErrors = {};
-
     if (!validateMedicineName(newMedicine.name)) {
       errors.name = 'اسم الدواء يجب أن يكون على الأقل حرفين';
     }
-
     if (!validateDosage(newMedicine.dosage)) {
       errors.dosage = 'الجرعة يجب أن تكون على الأقل حرفين';
     }
-
     if (!validateTime(newMedicine.time)) {
       errors.time = 'يرجى إدخال وقت صحيح';
     }
-
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
-  }, [newMedicine.name, newMedicine.dosage, newMedicine.time, validateMedicineName, validateDosage, validateTime]);
+  };
 
-  // Add new medicine with validation
-  const addMedicine = useCallback(() => {
+  // Add new medicine
+  const addMedicine = () => {
     if (!validateForm()) {
-      Alert.alert('خطأ', 'يرجى تصحيح الأخطاء المذكورة أدناه');
+      Alert.alert('خطأ', 'يرجى تصحيح الأخطاء');
       return;
     }
 
-    // Check for duplicate medicine names
     if (medicines.some(med => med.name.toLowerCase() === newMedicine.name.toLowerCase())) {
-      Alert.alert('خطأ', 'يوجد دواء بهذا الاسم مُسبقاً');
+      Alert.alert('خطأ', 'يوجد دواء بهذا الاسم');
       return;
     }
 
@@ -423,60 +412,47 @@ const MedicineReminderApp: React.FC = () => {
       isActive: true,
     };
 
-    const updatedMedicines = [...medicines, medicine];
-    setMedicines(updatedMedicines);
-
-    // Schedule notifications only if properly configured
+    setMedicines([...medicines, medicine]);
+    
     if (isNotificationConfigured && notificationsEnabled) {
       scheduleNotification(medicine);
     }
     
-    // Reset form
     setNewMedicine({ name: '', dosage: '', time: '', frequency: 'daily' });
     setValidationErrors({});
     setShowAddForm(false);
     
-    const successMessage = (notificationsEnabled && isNotificationConfigured)
-      ? 'تم إضافة الدواء بنجاح مع التذكيرات!' 
-      : 'تم إضافة الدواء بنجاح! (التذكيرات غير متاحة)';
-    
-    Alert.alert('نجح', successMessage);
-  }, [medicines, newMedicine, isNotificationConfigured, notificationsEnabled, scheduleNotification, validateForm]);
+    Alert.alert('نجح', 'تم إضافة الدواء بنجاح');
+  };
 
   // Mark medicine as taken
-  const markAsTaken = useCallback((id: string) => {
-    const updatedMedicines = medicines.map(med => 
-      med.id === id 
-        ? { ...med, lastTaken: new Date().toISOString() }
-        : med
-    );
-    
-    setMedicines(updatedMedicines);
-    Alert.alert('ممتاز!', 'تم تسجيل تناول الدواء');
-  }, [medicines]);
+  const markAsTaken = (id: string) => {
+    setMedicines(medicines.map(med => 
+      med.id === id ? { ...med, lastTaken: new Date().toISOString() } : med
+    ));
+    Alert.alert('تم', 'تم تسجيل تناول الدواء');
+  };
 
   // Toggle medicine active status
-  const toggleMedicine = useCallback((id: string) => {
+  const toggleMedicine = (id: string) => {
     const medicine = medicines.find(med => med.id === id);
     if (!medicine) return;
 
-    const updatedMedicines = medicines.map(med => 
-      med.id === id 
-        ? { ...med, isActive: !med.isActive }
-        : med
+    const updated = medicines.map(med => 
+      med.id === id ? { ...med, isActive: !med.isActive } : med
     );
     
-    setMedicines(updatedMedicines);
+    setMedicines(updated);
 
     if (medicine.isActive) {
       cancelNotifications(id);
     } else if (isNotificationConfigured && notificationsEnabled) {
       scheduleNotification({ ...medicine, isActive: true });
     }
-  }, [medicines, isNotificationConfigured, notificationsEnabled, cancelNotifications, scheduleNotification]);
+  };
 
   // Delete medicine
-  const deleteMedicine = useCallback((id: string) => {
+  const deleteMedicine = (id: string) => {
     Alert.alert(
       'تأكيد الحذف',
       'هل أنت متأكد من حذف هذا الدواء؟',
@@ -487,13 +463,12 @@ const MedicineReminderApp: React.FC = () => {
           style: 'destructive',
           onPress: () => {
             cancelNotifications(id);
-            const updatedMedicines = medicines.filter(med => med.id !== id);
-            setMedicines(updatedMedicines);
+            setMedicines(medicines.filter(med => med.id !== id));
           },
         },
       ]
     );
-  }, [medicines, cancelNotifications]);
+  };
 
   // Format time display
   const formatTime = (time: string) => {
@@ -531,23 +506,23 @@ const MedicineReminderApp: React.FC = () => {
       setSelectedTime(selectedTime);
       const timeString = `${selectedTime.getHours().toString().padStart(2, '0')}:${selectedTime.getMinutes().toString().padStart(2, '0')}`;
       setNewMedicine({...newMedicine, time: timeString});
-      if (validationErrors.time && validateTime(timeString)) {
+      if (validationErrors.time) {
         setValidationErrors({...validationErrors, time: undefined});
       }
     }
   };
 
-  // Handle input changes with validation
+  // Handle input changes
   const handleNameChange = (text: string) => {
     setNewMedicine({...newMedicine, name: text});
-    if (validationErrors.name && validateMedicineName(text)) {
+    if (validationErrors.name) {
       setValidationErrors({...validationErrors, name: undefined});
     }
   };
 
   const handleDosageChange = (text: string) => {
     setNewMedicine({...newMedicine, dosage: text});
-    if (validationErrors.dosage && validateDosage(text)) {
+    if (validationErrors.dosage) {
       setValidationErrors({...validationErrors, dosage: undefined});
     }
   };
@@ -555,22 +530,21 @@ const MedicineReminderApp: React.FC = () => {
   // Get notification status text
   const getNotificationStatus = () => {
     if (!isPushNotificationAvailable()) {
-      return '❌ وحدة التذكيرات غير متاحة';
+      return '❌ وحدة التذكيرات غير مثبتة';
     }
     if (!notificationsEnabled) {
-      return '❌ التذكيرات غير متاحة';
+      return '❌ التذكيرات غير مفعلة';
     }
     if (!isNotificationConfigured) {
-      return '⏳ جاري تكوين التذكيرات...';
+      return '⏳ جاري إعداد التذكيرات';
     }
-    return '✅ التذكيرات مفعلة';
+    return '✅ التذكيرات تعمل';
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#3B82F6" />
       
-      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>💊 تذكير الأدوية</Text>
         <Text style={styles.headerSubtitle}>اعتني بصحتك</Text>
@@ -580,15 +554,19 @@ const MedicineReminderApp: React.FC = () => {
         ]}>
           {getNotificationStatus()}
         </Text>
-        {notificationsEnabled && isNotificationConfigured && (
+        
+        {notificationsEnabled && isNotificationConfigured ? (
           <TouchableOpacity onPress={testNotification} style={styles.testButton}>
             <Text style={styles.testButtonText}>🧪 تجربة التنبيه</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity onPress={retryNotificationSetup} style={styles.retryButton}>
+            <Text style={styles.testButtonText}>🔄 إعادة المحاولة</Text>
           </TouchableOpacity>
         )}
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Add Medicine Button */}
         <TouchableOpacity
           onPress={() => setShowAddForm(!showAddForm)}
           style={[styles.addButton, showAddForm && styles.cancelButton]}
@@ -598,12 +576,7 @@ const MedicineReminderApp: React.FC = () => {
           </Text>
         </TouchableOpacity>
 
-        {/* Add Medicine Form Modal */}
-        <Modal
-          visible={showAddForm}
-          animationType="slide"
-          presentationStyle="pageSheet"
-        >
+        <Modal visible={showAddForm} animationType="slide">
           <SafeAreaView style={styles.modalContainer}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>إضافة دواء جديد</Text>
@@ -616,7 +589,6 @@ const MedicineReminderApp: React.FC = () => {
             </View>
 
             <ScrollView style={styles.formContainer}>
-              {/* Medicine Name */}
               <View style={styles.inputContainer}>
                 <Text style={styles.inputLabel}>اسم الدواء</Text>
                 <TextInput
@@ -631,7 +603,6 @@ const MedicineReminderApp: React.FC = () => {
                 )}
               </View>
 
-              {/* Dosage */}
               <View style={styles.inputContainer}>
                 <Text style={styles.inputLabel}>الجرعة</Text>
                 <TextInput
@@ -646,7 +617,6 @@ const MedicineReminderApp: React.FC = () => {
                 )}
               </View>
 
-              {/* Time */}
               <View style={styles.inputContainer}>
                 <Text style={styles.inputLabel}>الوقت</Text>
                 <TouchableOpacity
@@ -662,7 +632,6 @@ const MedicineReminderApp: React.FC = () => {
                 )}
               </View>
 
-              {/* Frequency */}
               <View style={styles.inputContainer}>
                 <Text style={styles.inputLabel}>التكرار</Text>
                 <View style={styles.frequencyContainer}>
@@ -708,7 +677,6 @@ const MedicineReminderApp: React.FC = () => {
           </SafeAreaView>
         </Modal>
 
-        {/* Time Picker */}
         {showTimePicker && (
           <DateTimePicker
             value={selectedTime}
@@ -719,7 +687,6 @@ const MedicineReminderApp: React.FC = () => {
           />
         )}
 
-        {/* Medicines List */}
         <View style={styles.medicinesList}>
           {medicines.length === 0 ? (
             <View style={styles.emptyState}>
@@ -848,6 +815,13 @@ const styles = StyleSheet.create({
   },
   testButton: {
     backgroundColor: '#10B981',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginTop: 8,
+  },
+  retryButton: {
+    backgroundColor: '#F59E0B',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
