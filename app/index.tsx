@@ -54,7 +54,23 @@ const MedicineReminderApp: React.FC = () => {
   const initializationRef = useRef({
     isInitialized: false,
     isConfigured: false,
+    initializationAttempted: false,
   });
+
+  // Check if PushNotification module is available and properly loaded
+  const isPushNotificationAvailable = useCallback(() => {
+    try {
+      return (
+        PushNotification && 
+        typeof PushNotification === 'object' &&
+        typeof PushNotification.configure === 'function' &&
+        typeof PushNotification.localNotificationSchedule === 'function'
+      );
+    } catch (error) {
+      console.warn('PushNotification module check failed:', error);
+      return false;
+    }
+  }, []);
 
   // Request notification permissions for Android 13+
   const requestNotificationPermission = async (): Promise<boolean> => {
@@ -84,6 +100,11 @@ const MedicineReminderApp: React.FC = () => {
 
   // Create notification channel after PushNotification is configured
   const createNotificationChannel = useCallback(() => {
+    if (!isPushNotificationAvailable()) {
+      console.warn('PushNotification not available for channel creation');
+      return;
+    }
+
     if (Platform.OS === 'android' && PushNotification.createChannel) {
       try {
         PushNotification.createChannel(
@@ -112,19 +133,22 @@ const MedicineReminderApp: React.FC = () => {
       initializationRef.current.isConfigured = true;
       setIsNotificationConfigured(true);
     }
-  }, []);
+  }, [isPushNotificationAvailable]);
 
   // Initialize push notifications with better error handling
   useEffect(() => {
     const initializeNotifications = async () => {
-      if (initializationRef.current.isInitialized) {
-        return; // Already initialized
+      // Prevent multiple initialization attempts
+      if (initializationRef.current.initializationAttempted) {
+        return;
       }
+      
+      initializationRef.current.initializationAttempted = true;
 
       try {
-        // Check if PushNotification is available
-        if (!PushNotification) {
-          console.warn('PushNotification module not available');
+        // Check if PushNotification module is available
+        if (!isPushNotificationAvailable()) {
+          console.warn('PushNotification module not available or not properly loaded');
           setNotificationsEnabled(false);
           setIsNotificationConfigured(false);
           return;
@@ -148,7 +172,7 @@ const MedicineReminderApp: React.FC = () => {
             // Create channel after successful registration
             setTimeout(() => {
               createNotificationChannel();
-            }, 500);
+            }, 1000);
           },
           
           onNotification: function (notification) {
@@ -172,11 +196,11 @@ const MedicineReminderApp: React.FC = () => {
             sound: true,
           },
           
-          popInitialNotification: true,
+          popInitialNotification: false, // Changed from true to false to avoid the error
           requestPermissions: Platform.OS === 'ios',
         });
 
-        // Set a fallback timeout for both platforms
+        // Set a fallback timeout for initialization
         setTimeout(() => {
           if (!initializationRef.current.isConfigured) {
             console.log('Setting notifications as enabled (fallback)');
@@ -186,7 +210,7 @@ const MedicineReminderApp: React.FC = () => {
             initializationRef.current.isConfigured = true;
             createNotificationChannel();
           }
-        }, 5000); // Increased timeout
+        }, 8000); // Increased timeout
 
       } catch (error) {
         console.error('Error initializing notifications:', error);
@@ -198,10 +222,10 @@ const MedicineReminderApp: React.FC = () => {
       }
     };
 
-    // Initialize with a longer delay to ensure native modules are ready
-    const timer = setTimeout(initializeNotifications, 2000);
+    // Initialize with a delay to ensure native modules are ready
+    const timer = setTimeout(initializeNotifications, 3000);
     return () => clearTimeout(timer);
-  }, [createNotificationChannel]);
+  }, [createNotificationChannel, isPushNotificationAvailable]);
 
   // Load medicines from AsyncStorage
   const loadMedicines = useCallback(async () => {
@@ -239,7 +263,7 @@ const MedicineReminderApp: React.FC = () => {
 
   // Schedule notification for medicine with better error handling
   const scheduleNotification = useCallback((medicine: Medicine) => {
-    if (!notificationsEnabled || !isNotificationConfigured || !PushNotification) {
+    if (!notificationsEnabled || !isNotificationConfigured || !isPushNotificationAvailable()) {
       console.warn('Notifications are not enabled, configured, or available');
       return;
     }
@@ -283,32 +307,40 @@ const MedicineReminderApp: React.FC = () => {
       console.error('Error scheduling notification:', error);
       Alert.alert('تنبيه', 'حدث خطأ في جدولة التذكيرات. سيتم حفظ الدواء بدون تذكيرات.');
     }
-  }, [notificationsEnabled, isNotificationConfigured]);
+  }, [notificationsEnabled, isNotificationConfigured, isPushNotificationAvailable]);
 
   // Cancel notifications for medicine
   const cancelNotifications = useCallback((medicineId: string) => {
-    if (!notificationsEnabled || !isNotificationConfigured || !PushNotification) {
+    if (!notificationsEnabled || !isNotificationConfigured || !isPushNotificationAvailable()) {
       return;
     }
 
     try {
-      // Get all scheduled notifications
-      PushNotification.getScheduledLocalNotifications((notifications) => {
-        notifications.forEach((notification) => {
-          if (notification.id && notification.id.toString().startsWith(medicineId)) {
-            PushNotification.cancelLocalNotification(notification.id.toString());
-            console.log(`Cancelled notification: ${notification.id}`);
-          }
+      // Check if getScheduledLocalNotifications is available
+      if (PushNotification.getScheduledLocalNotifications) {
+        PushNotification.getScheduledLocalNotifications((notifications) => {
+          notifications.forEach((notification) => {
+            if (notification.id && notification.id.toString().startsWith(medicineId)) {
+              PushNotification.cancelLocalNotification(notification.id.toString());
+              console.log(`Cancelled notification: ${notification.id}`);
+            }
+          });
         });
-      });
+      } else {
+        // Fallback: try to cancel by constructing likely IDs
+        for (let i = 0; i < 10; i++) { // Assume max 10 times per medicine
+          const notificationId = `${medicineId}_${i}`;
+          PushNotification.cancelLocalNotification(notificationId);
+        }
+      }
     } catch (error) {
       console.error('Error canceling notifications:', error);
     }
-  }, [notificationsEnabled, isNotificationConfigured]);
+  }, [notificationsEnabled, isNotificationConfigured, isPushNotificationAvailable]);
 
   // Test notification function
   const testNotification = useCallback(() => {
-    if (!notificationsEnabled || !isNotificationConfigured || !PushNotification) {
+    if (!notificationsEnabled || !isNotificationConfigured || !isPushNotificationAvailable()) {
       Alert.alert('خطأ', 'التنبيهات غير مفعلة أو لم يتم تكوينها بعد');
       return;
     }
@@ -333,7 +365,7 @@ const MedicineReminderApp: React.FC = () => {
       console.error('Error sending test notification:', error);
       Alert.alert('خطأ', 'حدث خطأ في إرسال التنبيه التجريبي');
     }
-  }, [notificationsEnabled, isNotificationConfigured]);
+  }, [notificationsEnabled, isNotificationConfigured, isPushNotificationAvailable]);
 
   // Input validation functions
   const validateMedicineName = useCallback((name: string): boolean => {
@@ -368,7 +400,7 @@ const MedicineReminderApp: React.FC = () => {
     return Object.keys(errors).length === 0;
   }, [newMedicine.name, newMedicine.dosage, newMedicine.time, validateMedicineName, validateDosage, validateTime]);
 
-  // Add new medicine with validation - Fixed dependency array
+  // Add new medicine with validation
   const addMedicine = useCallback(() => {
     if (!validateForm()) {
       Alert.alert('خطأ', 'يرجى تصحيح الأخطاء المذكورة أدناه');
@@ -468,7 +500,7 @@ const MedicineReminderApp: React.FC = () => {
     const [hours, minutes] = time.split(':');
     const hour12 = parseInt(hours) > 12 ? parseInt(hours) - 12 : parseInt(hours);
     const ampm = parseInt(hours) >= 12 ? 'مساءً' : 'صباحاً';
-    return `${hour12}:${minutes} ${ampm}`;
+    return `${hour12 === 0 ? 12 : hour12}:${minutes} ${ampm}`;
   };
 
   // Get time until next dose
@@ -522,7 +554,7 @@ const MedicineReminderApp: React.FC = () => {
 
   // Get notification status text
   const getNotificationStatus = () => {
-    if (!PushNotification) {
+    if (!isPushNotificationAvailable()) {
       return '❌ وحدة التذكيرات غير متاحة';
     }
     if (!notificationsEnabled) {
