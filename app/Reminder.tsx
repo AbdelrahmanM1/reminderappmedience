@@ -23,8 +23,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Audio } from 'expo-av';
 import { LinearGradient } from 'expo-linear-gradient';
-
-const { width, height } = Dimensions.get('window');
+const { width} = Dimensions.get('window');
 
 // Enhanced Medicine interface with categories
 interface Medicine {
