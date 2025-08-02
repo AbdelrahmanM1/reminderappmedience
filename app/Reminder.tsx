@@ -1158,6 +1158,10 @@ const styles = StyleSheet.create({
   },
   loadingContent: {
     alignItems: 'center',
+    backgroundColor: 'white',
+    padding: 40,
+    borderRadius: 20,
+    elevation: 5,
   },
   loadingIcon: {
     fontSize: 48,
@@ -1170,14 +1174,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   header: {
-    backgroundColor: 'transparent',
+    backgroundColor: '#667EEA',
   },
   headerGradient: {
-    backgroundColor: '#667EEA',
     paddingVertical: 28,
     paddingHorizontal: 20,
     alignItems: 'center',
-    shadowColor: '#667EEA',
+    shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 8,
@@ -1198,7 +1201,7 @@ const styles = StyleSheet.create({
   },
   headerSubtitle: {
     fontSize: 16,
-    color: '#C7D2FE',
+    color: '#E0E7FF',
     textAlign: 'center',
     fontFamily: 'System',
     fontWeight: '500',
@@ -1207,7 +1210,7 @@ const styles = StyleSheet.create({
   statsContainer: {
     flexDirection: 'row',
     marginBottom: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: '#5A67D8',
     borderRadius: 16,
     padding: 16,
     gap: 12,
@@ -1216,19 +1219,19 @@ const styles = StyleSheet.create({
   statItem: {
     alignItems: 'center',
     flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: '#4C51BF',
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 8,
   },
   primaryStat: {
-    backgroundColor: 'rgba(16, 185, 129, 0.2)',
+    backgroundColor: '#047857',
   },
   successStat: {
-    backgroundColor: 'rgba(34, 197, 94, 0.2)',
+    backgroundColor: '#059669',
   },
   warningStat: {
-    backgroundColor: 'rgba(239, 68, 68, 0.3)',
+    backgroundColor: '#DC2626',
   },
   statNumber: {
     fontSize: 24,
@@ -1238,18 +1241,18 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: 12,
-    color: '#E0E7FF',
+    color: 'white',
     marginTop: 2,
     fontFamily: 'System',
     fontWeight: '500',
   },
   warningText: {
-    color: '#FEF2F2',
+    color: 'white',
   },
   statusIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(16, 185, 129, 0.2)',
+    backgroundColor: '#047857',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
@@ -1264,12 +1267,13 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#ECFDF5',
+    color: 'white',
     fontFamily: 'System',
   },
   content: {
     flex: 1,
     paddingHorizontal: 16,
+    backgroundColor: 'white',
   },
   addButton: {
     backgroundColor: '#10B981',
@@ -1278,7 +1282,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     marginVertical: 20,
     alignItems: 'center',
-    shadowColor: '#10B981',
+    shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 6,
@@ -1289,7 +1293,6 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     backgroundColor: '#EF4444',
-    shadowColor: '#EF4444',
   },
   addButtonContent: {
     flexDirection: 'row',
@@ -1298,6 +1301,7 @@ const styles = StyleSheet.create({
   },
   addButtonIcon: {
     fontSize: 20,
+    color: 'white',
   },
   addButtonText: {
     color: 'white',
@@ -1307,7 +1311,7 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: 'white',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -1328,7 +1332,7 @@ const styles = StyleSheet.create({
   closeButton: {
     padding: 8,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: '#4C51BF',
   },
   closeButtonText: {
     fontSize: 18,
@@ -1338,6 +1342,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 20,
     paddingTop: 24,
+    backgroundColor: 'white',
   },
   inputContainer: {
     marginBottom: 24,
@@ -1392,7 +1397,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    shadowColor: '#10B981',
+    shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 2,
@@ -1453,6 +1458,7 @@ const styles = StyleSheet.create({
   },
   removeTimeButtonText: {
     fontSize: 16,
+    color: '#EF4444',
   },
   frequencyContainer: {
     flexDirection: 'row',
@@ -1479,8 +1485,6 @@ const styles = StyleSheet.create({
   frequencyButtonActive: {
     borderColor: '#667EEA',
     backgroundColor: '#667EEA',
-    shadowColor: '#667EEA',
-    shadowOpacity: 0.3,
   },
   frequencyButtonText: {
     fontSize: 16,
@@ -1515,8 +1519,6 @@ const styles = StyleSheet.create({
   dayButtonActive: {
     borderColor: '#667EEA',
     backgroundColor: '#667EEA',
-    shadowColor: '#667EEA',
-    shadowOpacity: 0.3,
   },
   dayButtonText: {
     fontSize: 14,
@@ -1570,7 +1572,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 24,
     marginBottom: 40,
-    shadowColor: '#10B981',
+    shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 6,
@@ -1587,12 +1589,14 @@ const styles = StyleSheet.create({
   },
   medicinesList: {
     paddingBottom: 20,
+    backgroundColor: 'white',
   },
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 80,
     paddingHorizontal: 20,
+    backgroundColor: 'white',
   },
   emptyStateIconContainer: {
     width: 120,
@@ -1632,7 +1636,7 @@ const styles = StyleSheet.create({
       width: 0,
       height: 4,
     },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
     borderLeftWidth: 6,
@@ -1906,14 +1910,14 @@ const styles = StyleSheet.create({
   },
   alarmDetails: {
     width: '100%',
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     borderRadius: 20,
     padding: 24,
     marginBottom: 32,
     alignItems: 'center',
   },
   medicineNameCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 8,
@@ -1949,7 +1953,7 @@ const styles = StyleSheet.create({
   },
   snoozeCountContainer: {
     marginTop: 12,
-    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -1969,7 +1973,7 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
     borderRadius: 16,
     alignItems: 'center',
-    shadowColor: '#10B981',
+    shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 6,
@@ -1990,7 +1994,7 @@ const styles = StyleSheet.create({
   },
   snoozeAlarmButton: {
     flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     borderWidth: 2,
     borderColor: 'white',
     paddingVertical: 16,
@@ -2005,7 +2009,7 @@ const styles = StyleSheet.create({
   },
   stopAlarmButton: {
     flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     borderWidth: 2,
     borderColor: 'white',
     paddingVertical: 16,
