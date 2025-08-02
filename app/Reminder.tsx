@@ -178,7 +178,7 @@ const MedicineReminderApp: React.FC = () => {
     try {
       // Create a simple alarm beep using Audio.Sound
       const { sound } = await Audio.Sound.createAsync(
-        require('./assets/alarm-sound.mp3'), // You'll need to add an alarm sound file
+        require('../assets/sound/alarm.mp3'), // You'll need to add an alarm sound file
         { 
           shouldPlay: false, 
           isLooping: true,
