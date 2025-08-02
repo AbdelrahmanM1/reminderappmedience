@@ -244,24 +244,25 @@ const MedicineReminderApp: React.FC = () => {
     return () => floatingLoop.stop();
   }, [fadeAnimation, headerAnimation, floatingAnimation]);
 
-  // Enhanced card animations
+  // card animations
   useEffect(() => {
-    if (medicines.length > 0) {
-      const animations = medicines.map((_, index) => {
-        if (!cardAnimations[index]) {
-          cardAnimations[index] = new RNAnimated.Value(0);
-        }
-        return RNAnimated.timing(cardAnimations[index], {
-          toValue: 1,
-          duration: 500,
-          delay: index * 100,
-          useNativeDriver: true,
-        });
+  if (medicines.length > 0) {
+    const animations = medicines.map((_, index) => {
+      if (!cardAnimations[index]) {
+        cardAnimations[index] = new RNAnimated.Value(0);
+      }
+      return RNAnimated.timing(cardAnimations[index], {
+        toValue: 1,
+        duration: 500,
+        delay: index * 100,
+        useNativeDriver: true,
       });
+    });
 
-      RNAnimated.stagger(100, animations).start();
-    }
-  }, [medicines.length, cardAnimations]);
+    RNAnimated.stagger(100, animations).start();
+  }
+}, [medicines, cardAnimations]);
+
 
   // Enhanced pulse animation for alarm
   useEffect(() => {
