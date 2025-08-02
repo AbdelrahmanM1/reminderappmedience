@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Reminderthemedienc",
-    "slug": "Reminderthemedienc",
+    "name": "Medience Reminder",
+    "slug": "Medience-Reminder App",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -34,7 +34,8 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
-      ]
+      ],
+      "expo-audio"
     ],
     "experiments": {
       "typedRoutes": true
