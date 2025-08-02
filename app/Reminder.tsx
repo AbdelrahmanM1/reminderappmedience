@@ -1838,12 +1838,13 @@ const MedicineReminderApp: React.FC = () => {
                               }
                               style={styles.stockChip}
                             >
-                              <Text style={[
-                                styles.stockChipText,
-                                medicine.stockAlert && medicine.stock <= medicine.stockAlert && styles.lowStockChipText
+                           <Text style={[
+                              styles.stockChipText,
+                              (medicine.stockAlert !== undefined && medicine.stock <= medicine.stockAlert) ? styles.lowStockChipText : undefined
                               ]}>
-                                {medicine.stock} متبقي
-                              </Text>
+                              {medicine.stock} متبقي
+                          </Text>
+
                             </LinearGradient>
                             {medicine.stockAlert && (
                               <Text style={styles.stockAlertText}>
